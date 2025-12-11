@@ -8,7 +8,7 @@ ntrials = 1;
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-3; % process noise variance
-    measure_sig = 1e-2; % measurement noise variance
+    measure_sig = 1e-3; % measurement noise variance
 else
     process_sig = 0; % process noise variance
     measure_sig = 1e-4; % measurement noise variance
@@ -26,7 +26,7 @@ TU = 1.0 / sqrt((G * (m_1 + m_2)) / DU^3);
 
 % SC Initial states
 % Observer (L2 Halo)
-x0_obs =  [1.1423846032; 0.0; 0.1597054213; 0.0; -0.2224918027; 0.0];
+x0_obs =  [1.108176760562800, -0.117270070982379, 0.106310036921042, -0.096157733123961, -0.115664544723324, -0.166026773608929]';
 
 % Target (dro) % jc = 3.996
 x0_tgt = [9.7651362015832144E-1	-5.7647806541303165E-28	-2.2746379925699658E-32	9.2638853182074272E-13	1.0468285446328065E+0	4.1733999115209969E-31	]';
@@ -34,7 +34,7 @@ x0_tgt = [9.7651362015832144E-1	-5.7647806541303165E-28	-2.2746379925699658E-32	
 
 % sampling and interval time
 dt = 60/TU; % every minute
-tf = pi/2;
+tf = pi/4;
 t = 0:dt:tf;
 m = length(t);
 
@@ -77,8 +77,7 @@ for trial=1:ntrials
     
     % Generate truth and measurements
     f = @(t, x) crtbp_natural_eom(t, x, mu, Q);
-    f_nonoise = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
-    f_obs = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6)); % same as f_nonoise just for clarity/incase i wanna mess with stuff
+    f_obs = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
     X = zeros(n, m); X(:,1) = x0_tgt;
     X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
     ym = zeros(3,m); 
@@ -107,7 +106,7 @@ for trial=1:ntrials
         xx0=Xhat(:,i);
         xx=sigv+kron(Xhat(:,i),ones(1,2*n));
     
-        xxnext = rk4(f_nonoise, [xx0 xx], t(i), dt);
+        xxnext = rk4(f, [xx0 xx], t(i), dt);
         xx0 = xxnext(:,1);
         xx = xxnext(:,2:2*n+1);
     
@@ -122,9 +121,9 @@ for trial=1:ntrials
         % if we're occluded, skip the below
         if occ(i) ~= 1
             for j=1:2*n
-                yez(:,j)=range_angle_measurement(xx(:,j), X_obs(:,i+1), t(i), zeros(3,3), mu);
+                yez(:,j)=range_angle_measurement(xx(:,j), X_obs(:,i+1), t(i+1), zeros(3,3), mu); % not totally sure whats wrong, but putting R here causes err
             end
-            ye0 = range_angle_measurement(xx0, X_obs(:,i+1), t(i), zeros(3,3), mu);
+            ye0 = range_angle_measurement(xx0, X_obs(:,i+1), t(i+1), zeros(3,3), mu);
             ye = W0m*ye0+Wim*sum(yez,2);
         
             % pyy
@@ -151,20 +150,20 @@ for trial=1:ntrials
     
         % EKF
         % propagate
-        Xhat_ekf(:,i+1) = rk4(f_nonoise, Xhat_ekf(:,i), t(i), dt);
+        Xhat_ekf(:,i+1) = rk4(f, Xhat_ekf(:,i), t(i), dt);
     
         % estimate output (observation)
-        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i), t(i), R, mu);
+        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i+1), t(i+1), R, mu);
     
         % covariance propagation
         F = crtbp_jacobian(Xhat_ekf(:,i+1), mu); % get jacobian
         phi = c2d(F, zeros(6,1), dt);
-        pcov_ekf = phi*pcov_ekf*phi';
+        pcov_ekf = phi*pcov_ekf*phi'+Q;
     
         % update
         % if we're occluded, skip
         if occ(i) ~= 1
-            h_ekf = range_angle_jacobian(Xhat_ekf(:,i+1), X_obs(:,i+1), mu, t(i));
+            h_ekf = range_angle_jacobian(Xhat_ekf(:,i+1), X_obs(:,i+1), mu, t(i+1));
             gain_ekf=pcov_ekf*h_ekf'*inv(h_ekf*pcov_ekf*h_ekf'+R);
             pcov_ekf=(eye(n)-gain_ekf*h_ekf)*pcov_ekf;
             P_ekf(:,i+1)=diag(pcov_ekf);
