@@ -133,7 +133,7 @@ for trial=1:ntrials
         pxy = pxy0+Wim*pmat*pyymat';
     
         % Innovations
-        pvv = pyy+R;
+        pvv = pyy+R; % measurement error is linear!
     
         % Gain and update
         gain = real(pxy*inv(pvv));

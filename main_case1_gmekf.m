@@ -70,23 +70,26 @@ L = 5;
 kk = randi(6);
 [xmeans, ps, ws] = splitting_library(x0_tgt, pcov, L, kk);
 
-covs = zeros(1,n,L);
-for k=1:L
-    covs(:,:,k)=ps(:,k);
-end
-gm = gmdistribution(xmeans', covs, ws); % vectors need to be horizontal for some reason
-gms = cell(1,m-1); gms{1}=gm; % gmm storage in cell arr.
-% note length is L-1 because we dont really care about gm at end of process
+% Here's how I'm going to organize the GMMs
+% the for a given trial, the GMMs will be a cell(3,m-1);
+% each column will consist of 3 matrices in each cell
+% cell in row 1: nxL matrix of means
+% cell in row 2: nxL matrix of covariances (stored diagonally)
+% cell in row 3: 1xL matrix of weights
 
-% now, pull the 'true' initial estimate from gm
-xhat0 = random(gm)'; % transpose because gm stores horizontally
+gms = cell(3,m-1);
+gms{1,1} = xmeans;
+gms{2,1} = ps;
+gms{3,1} = ws;
+
+% now, pull the 'true' initial estimate from gmm
+[xhat0, Phat0] = produce_state_estimate(gms{1,1}, gms{2,1}, gms{3,1}); 
 
 Xhat_gmekf = zeros(n,m); Xhat_gmekf(:,1)=xhat0;
 
 for i=1:m-1
     
-    ws = gm.ComponentProportion; % get weights of each component
-    %L=L; % never changes in "baseline" GMEKF
+    ws = gms{3,i};
     
     Xobsip1 = X_obs(:,i+1); % observer state
     ymip1 = ym(:,i+1); % measurement
@@ -96,12 +99,12 @@ for i=1:m-1
     for k=1:L
         xm = xmeans(:,k);
         xmeans(:,k) = rk4(f, xm, t(i), dt);
-        pk = diag(covs(1,:,k));
+        pk = diag(ps(:,k));
         
         Fm = crtbp_jacobian(xm, mu); % jacobian from prev. estimate
         phi = c2d(Fm, zeros(6,1), dt);
         Pkp = phi*pk*phi' + Q;
-        covs(1,:,k) = diag(Pkp)';
+        ps(:,k) = diag(Pkp)';
     
         % est out
         ye_gmekf(:,k) = range_angle_measurement(xm, Xobsip1, t(i+1), R, mu);
@@ -118,7 +121,7 @@ for i=1:m-1
         
         Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % linearized jacobian
 
-        cov = diag(covs(1,:,k)); % propagated covariance of kth element
+        cov = diag(ps(:,k)); % propagated covariance of kth element
 
         Wk = Hm*cov*Hm'+R; % Term repeated a few times
 
@@ -130,7 +133,7 @@ for i=1:m-1
 
         % Cov update
         covup = cov - Kk*Hm*cov;
-        covs(1,:,k) = diag(covup); % save cov
+        ps(:,k) = diag(covup); % save cov
 
         betak = det(2*pi*Wk)^(-1/2)*exp(-0.5 *(ymip1-ye_gmekf(:,k))'*inv(Wk)*(ymip1-ye_gmekf(:,k)));
         betas(:,k) = betak;
@@ -141,19 +144,19 @@ for i=1:m-1
     sm = sum(betas.*ws);
 
     ws = ws.*betas./sm;
-
-
-    gm = gmdistribution(xmeans', covs, eps+ws); % adding eps to let the gmdistribution object do the work for us
     
-    gms{i} = gm;
+    gms{1,i+1} = xmeans;
+    gms{2,i+1} = ps;
+    gms{3,i+1} = ws;
 
-    Xhat_gmekf(:,i+1) = random(gm);
+    [xh, ph] = produce_state_estimate(xmeans, ps, ws);
+    Xhat_gmekf(:,i+1) = xh;
     
 end
 
 all_ws = zeros(L,m-1);
 for i=1:m-1
-    ws = gms{i}.ComponentProportion;
+    ws = gms{3,i};
     all_ws(:,i) = ws';
 end
 
