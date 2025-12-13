@@ -8,7 +8,7 @@ ntrials = 1;
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-3; % process noise variance
-    measure_sig = 1e-3; % measurement noise variance
+    measure_sig = 1e-2; % measurement noise variance
 else
     process_sig = 0; % process noise variance
     measure_sig = 1e-4; % measurement noise variance
@@ -77,7 +77,7 @@ for trial=1:ntrials
     
     % Generate truth and measurements
     f = @(t, x) crtbp_natural_eom(t, x, mu, Q);
-    f_obs = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
+    f_nonoise = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
     X = zeros(n, m); X(:,1) = x0_tgt;
     X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
     ym = zeros(3,m); 
@@ -90,7 +90,7 @@ for trial=1:ntrials
         X(:,i+1) = rk4(f, X(:,i), t(i), dt);
         
         % Measurement
-        X_obs(:,i+1) = rk4(f_obs, X_obs(:,i), t(i), dt); % propagate observer
+        X_obs(:,i+1) = rk4(f_nonoise, X_obs(:,i), t(i), dt); % propagate observer
         occ(i+1) = is_occluded_by_moon(X(:,i+1), X_obs(:,i+1), mu);
         ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
     end
@@ -99,14 +99,14 @@ for trial=1:ntrials
     Xhat = zeros(n, m); Xhat(:,1) = xhat0;
     Xhat_ekf = zeros(n, m); Xhat_ekf(:,1) = xhat0;
     for i=1:m-1
-        % UKF
+        %UKF
         % Cov decomp & sigma points
         psquare = chol(pcov)';
         sigv=real([sqrt(n+lam)*psquare -sqrt(n+lam)*psquare]);
         xx0=Xhat(:,i);
         xx=sigv+kron(Xhat(:,i),ones(1,2*n));
     
-        xxnext = rk4(f, [xx0 xx], t(i), dt);
+        xxnext = rk4(f_nonoise, [xx0 xx], t(i), dt);
         xx0 = xxnext(:,1);
         xx = xxnext(:,2:2*n+1);
     
@@ -120,9 +120,9 @@ for trial=1:ntrials
     
         % if we're occluded, skip the below
         if occ(i) ~= 1
-            for j=1:2*n
-                yez(:,j)=range_angle_measurement(xx(:,j), X_obs(:,i+1), t(i+1), zeros(3,3), mu); % not totally sure whats wrong, but putting R here causes err
-            end
+        for j=1:2*n
+            yez(:,j)=range_angle_measurement(xx(:,j), X_obs(:,i+1), t(i+1), zeros(3,3), mu);
+        end
             ye0 = range_angle_measurement(xx0, X_obs(:,i+1), t(i+1), zeros(3,3), mu);
             ye = W0m*ye0+Wim*sum(yez,2);
         
@@ -136,10 +136,10 @@ for trial=1:ntrials
             pxy = pxy0+Wim*pmat*pyymat';
         
             % Innovations
-            pvv = pyy+R;
+            pvv = pyy+R; % measurement error is linear!
         
             % Gain and update
-            gain = real(pxy*inv(pvv)); %#ok<*MINV>
+            gain = real(pxy*inv(pvv));
             pcov = pcov-gain*pvv*gain';
             P(:,i+1) = diag(pcov);
             Xhat(:,i+1)=Xhat(:,i+1)+ gain*(ym(:,i+1)-ye);
@@ -150,15 +150,15 @@ for trial=1:ntrials
     
         % EKF
         % propagate
-        Xhat_ekf(:,i+1) = rk4(f, Xhat_ekf(:,i), t(i), dt);
+        Xhat_ekf(:,i+1) = rk4(f_nonoise, Xhat_ekf(:,i), t(i), dt);
     
         % estimate output (observation)
-        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i+1), t(i+1), R, mu);
+        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i+1), t(i+1), zeros(3,3), mu);
     
         % covariance propagation
         F = crtbp_jacobian(Xhat_ekf(:,i+1), mu); % get jacobian
         phi = c2d(F, zeros(6,1), dt);
-        pcov_ekf = phi*pcov_ekf*phi'+Q;
+        pcov_ekf = phi*pcov_ekf*phi'+Q*dt;
     
         % update
         % if we're occluded, skip

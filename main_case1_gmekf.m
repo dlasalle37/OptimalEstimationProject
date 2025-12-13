@@ -25,12 +25,12 @@ x0_tgt = [1.0186592988052636E+0	-2.1505075615805342E-27	-1.7967210088475610E-1	8
 
 % sampling and interval time
 dt = 60/TU; % every minute
-tf = pi;
+tf = pi/2;
 t = 0:dt:tf;
 m = length(t);
 n=6;
 
-process_sig = 1e-6; % process noise variance
+process_sig = 1e-3; % process noise variance
 measure_sig = 1e-1; % measurement noise variance
 Q = diag([0,0,0,process_sig^2, process_sig^2, process_sig^2]); % pn cov
 R = diag([measure_sig^2, measure_sig^2, measure_sig^2]); % mn cov
@@ -42,12 +42,9 @@ h0 = range_angle_measurement(x0_tgt, x0_obs, t(1), R, mu);
 pcov = diag([1e-6, 1e-6, 1e-6, 1e-3, 1e-3, 1e-3]);
 P = zeros(6,m); P(:,1) = diag(pcov); % cov storage
 
-% initial estimate
-xhat0 = mvnrnd(x0_tgt, pcov, 1)'; % get realization from distribution
-
 % Generate truth and measurements
 f = @(t, x) crtbp_natural_eom(t, x, mu, Q);
-f_obs = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6)); 
+f_nonoise = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6)); 
 X = zeros(n, m); X(:,1) = x0_tgt;
 X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
 ym = zeros(3,m); ym(:,1) = h0;
@@ -56,7 +53,7 @@ for i=1:m-1
     X(:,i+1) = rk4(f, X(:,i), t(i), dt);
     
     % Measurement
-    X_obs(:,i+1) = rk4(f_obs, X_obs(:,i), t(i), dt); % propagate measurement
+    X_obs(:,i+1) = rk4(f_nonoise, X_obs(:,i), t(i), dt); % propagate measurement
     ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
 end
 
@@ -69,6 +66,7 @@ end
 L = 5;
 kk = randi(6);
 [xmeans, ps, ws] = splitting_library(x0_tgt, pcov, L, kk);
+
 
 % Here's how I'm going to organize the GMMs
 % the for a given trial, the GMMs will be a cell(3,m-1);
@@ -84,9 +82,8 @@ gms{3,1} = ws;
 
 % now, pull the 'true' initial estimate from gmm
 [xhat0, Phat0] = produce_state_estimate(gms{1,1}, gms{2,1}, gms{3,1}); 
-
 Xhat_gmekf = zeros(n,m); Xhat_gmekf(:,1)=xhat0;
-
+P_combined_gmekf = zeros(n,m); P_combined_gmekf(:,1)=diag(Phat0);
 for i=1:m-1
     
     ws = gms{3,i};
@@ -97,17 +94,17 @@ for i=1:m-1
     % propagate each mean & cov & estimate output
     ye_gmekf = zeros(3,L); % estimate output for each mean
     for k=1:L
-        xm = xmeans(:,k);
-        xmeans(:,k) = rk4(f, xm, t(i), dt);
-        pk = diag(ps(:,k));
+        xm = xmeans(:,k); % xm_(i)^+ (previous step posterior)
+        xmeans(:,k) = rk4(f_nonoise, xm, t(i), dt); % xm(i+1)^- (current step priori)
+        pk = diag(ps(:,k)); % previous step posterior
         
-        Fm = crtbp_jacobian(xm, mu); % jacobian from prev. estimate
+        Fm = crtbp_jacobian(xm, mu); % jacobian from prev. mean
         phi = c2d(Fm, zeros(6,1), dt);
-        Pkp = phi*pk*phi' + Q;
-        ps(:,k) = diag(Pkp)';
+        Pkp = phi*pk*phi' + Q*dt;
+        ps(:,k) = diag(Pkp)'; % current step priori
     
         % est out
-        ye_gmekf(:,k) = range_angle_measurement(xm, Xobsip1, t(i+1), R, mu);
+        ye_gmekf(:,k) = range_angle_measurement(xmeans(:,k), Xobsip1, t(i+1), zeros(3,3), mu);
 
     end
 
@@ -117,24 +114,20 @@ for i=1:m-1
     for k=1:L
         
         % Some terms
-        xm = xmeans(:,k);
-        
-        Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % linearized jacobian
-
+        xm = xmeans(:,k); % prediction mean (mi^-)
+        Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % jacobian
         cov = diag(ps(:,k)); % propagated covariance of kth element
-
         Wk = Hm*cov*Hm'+R; % Term repeated a few times
-
-        Kk = cov*Hm'*inv(Wk);  % gain
         
+        % gain
+        Kk = cov*Hm'*inv(Wk);    
        
         % mean update
-        xmeans(:,k)=xm+Kk*(-ye_gmekf(:,k));
+        xmeans(:,k)=xm+Kk*(ymip1-ye_gmekf(:,k));
 
         % Cov update
         covup = cov - Kk*Hm*cov;
         ps(:,k) = diag(covup); % save cov
-
         betak = det(2*pi*Wk)^(-1/2)*exp(-0.5 *(ymip1-ye_gmekf(:,k))'*inv(Wk)*(ymip1-ye_gmekf(:,k)));
         betas(:,k) = betak;
 
@@ -151,7 +144,7 @@ for i=1:m-1
 
     [xh, ph] = produce_state_estimate(xmeans, ps, ws);
     Xhat_gmekf(:,i+1) = xh;
-    
+    P_combined_gmekf(:,i+1) = diag(ph);
 end
 
 all_ws = zeros(L,m-1);
@@ -163,16 +156,58 @@ end
 figure
 plot(t(1:end-1), all_ws)
 
-
+sig3 = P_combined_gmekf.^0.5*3;
 errs = X-Xhat_gmekf;
 
 figure
 subplot(3,1,1)
+hold on
 plot(t, errs(1,:))
+plot(t, sig3(1,:), '-r')
+plot(t, -sig3(1,:), '-r')
+hold off
 
 subplot(3,1,2)
+hold on
 plot(t, errs(2,:))
+plot(t, sig3(2,:), '-r')
+plot(t, -sig3(2,:), '-r')
+hold off
 
 subplot(3,1,3)
-plot(t, errs(2,:))
+hold on
+plot(t, errs(3,:))
+plot(t, sig3(3,:), '-r')
+plot(t, -sig3(3,:), '-r')
+hold off
 
+figure
+
+subplot(3,1,1)
+hold on
+plot(t, errs(4,:))
+plot(t, sig3(4,:), '-r')
+plot(t, -sig3(4,:), '-r')
+hold off
+
+subplot(3,1,2)
+hold on
+plot(t, errs(5,:))
+plot(t, sig3(5,:), '-r')
+plot(t, -sig3(5,:), '-r')
+hold off
+
+subplot(3,1,3)
+hold on 
+plot(t, errs(6,:))
+plot(t, sig3(6,:), '-r')
+plot(t, -sig3(6,:), '-r')
+hold off
+
+
+figure
+hold on
+plot3(Xhat_gmekf(1,:), Xhat_gmekf(2,:), Xhat_gmekf(3,:))
+plot3(X(1,:), X(2,:), X(3,:))
+legend('GMEKF', 'Truth')
+hold off

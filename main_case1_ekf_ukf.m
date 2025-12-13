@@ -82,7 +82,7 @@ for trial=1:ntrials
     
     % Generate truth and measurements
     f = @(t, x) crtbp_natural_eom(t, x, mu, Q);
-    f_obs = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
+    f_nonoise = @(t,x) crtbp_natural_eom(t, x, mu, zeros(6,6));
     X = zeros(n, m); X(:,1) = x0_tgt;
     X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
     ym = zeros(3,m); ym(:,1) = h0;
@@ -91,7 +91,7 @@ for trial=1:ntrials
         X(:,i+1) = rk4(f, X(:,i), t(i), dt);
         
         % Measurement
-        X_obs(:,i+1) = rk4(f_obs, X_obs(:,i), t(i), dt); % propagate observer
+        X_obs(:,i+1) = rk4(f_nonoise, X_obs(:,i), t(i), dt); % propagate observer
         ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
     end
     
@@ -106,7 +106,7 @@ for trial=1:ntrials
         xx0=Xhat(:,i);
         xx=sigv+kron(Xhat(:,i),ones(1,2*n));
     
-        xxnext = rk4(f, [xx0 xx], t(i), dt);
+        xxnext = rk4(f_nonoise, [xx0 xx], t(i), dt);
         xx0 = xxnext(:,1);
         xx = xxnext(:,2:2*n+1);
     
@@ -144,15 +144,15 @@ for trial=1:ntrials
     
         % EKF
         % propagate
-        Xhat_ekf(:,i+1) = rk4(f, Xhat_ekf(:,i), t(i), dt);
+        Xhat_ekf(:,i+1) = rk4(f_nonoise, Xhat_ekf(:,i), t(i), dt);
     
         % estimate output (observation)
-        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i+1), t(i+1), R, mu);
+        ye_ekf = range_angle_measurement(Xhat_ekf(:,i+1), X_obs(:,i+1), t(i+1), zeros(3,3), mu);
     
         % covariance propagation
         F = crtbp_jacobian(Xhat_ekf(:,i), mu); % get jacobian
         phi = c2d(F, zeros(6,1), dt);
-        pcov_ekf = phi*pcov_ekf*phi'+Q;
+        pcov_ekf = phi*pcov_ekf*phi'+Q*dt;
     
         % update
         h_ekf = range_angle_jacobian(Xhat_ekf(:,i+1), X_obs(:,i+1), mu, t(i+1));
