@@ -19,8 +19,9 @@ function dx = crtbp_natural_eom(t, x, mu, Q)
         r = x(1:3,i);
         vx = x(4,i); vy=x(5,i); vz=x(6,i);
         
-        % Form noise vec
-        w = Q*randn(m,1);
+        % Form noise vec % assuming q is diagonal
+        Qsqrt = diag(sqrt(diag(Q)));
+        w = Qsqrt*randn(m,1);
         
         % dynamics
         gr = g(r,mu); % partial of pseudopotential wrt r

@@ -33,7 +33,7 @@ x0_tgt = [9.7651362015832144E-1	-5.7647806541303165E-28	-2.2746379925699658E-32	
 
 
 % sampling and interval time
-dt = 60/TU; % every minute
+dt = 30/TU; % every minute
 tf = pi/4;
 t = 0:dt:tf;
 m = length(t);

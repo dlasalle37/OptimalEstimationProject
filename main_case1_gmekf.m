@@ -1,11 +1,23 @@
 %% Setup
 clear; close all
 
-% Don't have code exs from class to lean on, so doing this separately until
-% I can code this satisfactorily
+% This filter is a little more involved, so coding it separately
 
 % Supress annoying warning
 %#ok<*MINV> 
+
+% num trials?
+ntrials = 1;
+
+% Pick Noise Level
+noiselevel = "high"; % "low" or "high"
+if noiselevel == "high"
+    process_sig = 1e-4; % sqrt process noise variance
+    measure_sig = 1e-2; % sqrt measurement noise variance
+else
+    process_sig = 0; % process noise variance
+    measure_sig = 1e-4; % measurement noise variance
+end
 
 % CRTBP params
 G = 6.673e-20;
@@ -30,8 +42,6 @@ t = 0:dt:tf;
 m = length(t);
 n=6;
 
-process_sig = 1e-3; % process noise variance
-measure_sig = 1e-1; % measurement noise variance
 Q = diag([0,0,0,process_sig^2, process_sig^2, process_sig^2]); % pn cov
 R = diag([measure_sig^2, measure_sig^2, measure_sig^2]); % mn cov
 
@@ -63,16 +73,22 @@ end
 % pcov
 
 % How many components (additional means) to use?
+xhat0 = x0_tgt+chol(pcov)'*randn(6,1);
 L = 5;
 kk = randi(6);
-[xmeans, ps, ws] = splitting_library(x0_tgt, pcov, L, kk);
+[xmeans, ps, ws] = splitting_library(xhat0, pcov, L, kk);
 
+ps2 = cell(1,L);
+for i=1:L
+    ps2{i}=diag(ps(:,i));
+end
+ps = ps2;
 
 % Here's how I'm going to organize the GMMs
 % the for a given trial, the GMMs will be a cell(3,m-1);
 % each column will consist of 3 matrices in each cell
 % cell in row 1: nxL matrix of means
-% cell in row 2: nxL matrix of covariances (stored diagonally)
+% cell in row 2: 1xL cell arr. of covariances
 % cell in row 3: 1xL matrix of weights
 
 gms = cell(3,m-1);
@@ -96,13 +112,13 @@ for i=1:m-1
     for k=1:L
         xm = xmeans(:,k); % xm_(i)^+ (previous step posterior)
         xmeans(:,k) = rk4(f_nonoise, xm, t(i), dt); % xm(i+1)^- (current step priori)
-        pk = diag(ps(:,k)); % previous step posterior
-        
+        %pk = diag(ps(:,k)); % previous step posterior
+        pk = ps{k};
         Fm = crtbp_jacobian(xm, mu); % jacobian from prev. mean
         phi = c2d(Fm, zeros(6,1), dt);
         Pkp = phi*pk*phi' + Q*dt;
-        ps(:,k) = diag(Pkp)'; % current step priori
-    
+        %ps(:,k) = diag(Pkp); % current step priori
+        ps{k}=Pkp;
         % est out
         ye_gmekf(:,k) = range_angle_measurement(xmeans(:,k), Xobsip1, t(i+1), zeros(3,3), mu);
 
@@ -116,7 +132,8 @@ for i=1:m-1
         % Some terms
         xm = xmeans(:,k); % prediction mean (mi^-)
         Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % jacobian
-        cov = diag(ps(:,k)); % propagated covariance of kth element
+        %cov = diag(ps(:,k)); % propagated covariance of kth element
+        cov = ps{k};
         Wk = Hm*cov*Hm'+R; % Term repeated a few times
         
         % gain
@@ -126,8 +143,9 @@ for i=1:m-1
         xmeans(:,k)=xm+Kk*(ymip1-ye_gmekf(:,k));
 
         % Cov update
-        covup = cov - Kk*Hm*cov;
-        ps(:,k) = diag(covup); % save cov
+        cov = (eye(n)-Kk*Hm)*cov;
+        %ps(:,k) = diag(cov); % save cov
+        ps{k}=cov;
         betak = det(2*pi*Wk)^(-1/2)*exp(-0.5 *(ymip1-ye_gmekf(:,k))'*inv(Wk)*(ymip1-ye_gmekf(:,k)));
         betas(:,k) = betak;
 

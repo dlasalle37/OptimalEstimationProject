@@ -23,7 +23,7 @@ theta_obs_moon = atan(moon_radius/d_lun_obs); % angle of occluded zone
 theta_obs_tgt = acos(dot(r_lun_obs, r_tgt_obs)/(d_lun_obs*d_tgt_obs));
 
 occ = false;
-if theta_obs_moon >= theta_obs_tgt
+if theta_obs_moon >= theta_obs_tgt && d_tgt_obs > d_lun_obs
     occ = true;
 end
 

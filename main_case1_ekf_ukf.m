@@ -7,8 +7,8 @@ ntrials = 1;
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
-    process_sig = 1e-3; % process noise variance
-    measure_sig = 1e-1; % measurement noise variance
+    process_sig = 1e-4; % sqrt process noise variance
+    measure_sig = 1e-2; % sqrt measurement noise variance
 else
     process_sig = 0; % process noise variance
     measure_sig = 1e-4; % measurement noise variance

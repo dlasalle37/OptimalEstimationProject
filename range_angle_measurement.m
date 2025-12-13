@@ -23,7 +23,7 @@ rho_mag = norm(rho_rsw);
 h = [rho_mag; atan(rho_s/rho_r); asin(rho_w/rho_mag)]; %[range, az., el.]'
 
 % add noise
-v = R*randn(3,1);
+v = diag(sqrt(diag(R)))*randn(3,1); % note we're assuming R is diagonal here, just doing it this way to avoid warnings
 h = h + v;
 
 end

@@ -16,7 +16,8 @@ function [xhat, Phat] = produce_state_estimate(xms, ps, ws)
         xm = xms(:,k);
         xhat = xhat + wm*xm;
         
-        Pm = diag(ps(:,k));
+        %Pm = diag(ps(:,k));
+        Pm = ps{k};
         Phat = Phat + wm*Pm + wm*(xm*xm');
     end
     Phat = Phat - xhat*xhat';
