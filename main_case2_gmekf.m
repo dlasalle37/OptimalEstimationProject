@@ -10,14 +10,15 @@ clear; close all
 ntrials = 100;
 
 % Pick Noise Level
-noiselevel = "high"; % "low" or "high"
+noiselevel = "low"; % "low" or "high"
 if noiselevel == "high"
-    process_sig = 1e-4; % sqrt process noise variance
-    measure_sig = 1e-2; % sqrt measurement noise variance
+    process_sig = 1e-12; % process noise variance
+    measure_sig = 1e-2; % measurement noise variance
 else
     process_sig = 0; % process noise variance
     measure_sig = 1e-4; % measurement noise variance
 end
+
 
 % CRTBP params
 G = 6.673e-20;
@@ -29,15 +30,15 @@ DU = r_12;
 TU = 1.0 / sqrt((G * (m_1 + m_2)) / DU^3);
 
 % SC Initial states
-% Observer (L2 halo)
-x0_obs = [1.1423846032; 0.0; 0.1597054213; 0.0; -0.2224918027; 0.0];
+% Observer (L2 Halo)
+x0_obs =  [1.108176760562800, -0.117270070982379, 0.106310036921042, -0.096157733123961, -0.115664544723324, -0.166026773608929]';
 
-% Target (NRHO)
-x0_tgt = [1.0186592988052636E+0	-2.1505075615805342E-27	-1.7967210088475610E-1	8.7422243833437732E-14	-9.5814062038783648E-2	1.3141536561558831E-12]';
+% Target (dro) % jc = 3.996
+x0_tgt = [9.7651362015832144E-1	-5.7647806541303165E-28	-2.2746379925699658E-32	9.2638853182074272E-13	1.0468285446328065E+0	4.1733999115209969E-31	]';
 
 % sampling and interval time
-dt = 60/TU; % every minute
-tf = pi/2;
+dt = 30/TU; % every minute
+tf = pi/4;
 t = 0:dt:tf;
 m = length(t);
 n=6;
@@ -65,12 +66,15 @@ for jj=1:ntrials
     X = zeros(n, m); X(:,1) = x0_tgt;
     X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
     ym = zeros(3,m); ym(:,1) = h0;
+    occ = -1*ones(1,m); % occlusion vector
+    occ(1) = is_occluded_by_moon(x0_tgt, x0_obs, mu); 
     for i=1:m-1
         % Truth (target)
         X(:,i+1) = rk4(f, X(:,i), t(i), dt);
         
         % Measurement
         X_obs(:,i+1) = rk4(f_nonoise, X_obs(:,i), t(i), dt); % propagate measurement
+        occ(i+1) = is_occluded_by_moon(X(:,i+1), X_obs(:,i+1), mu);
         ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
     end
     
@@ -133,30 +137,34 @@ for jj=1:ntrials
     
     
         % update
-        betas = zeros(1,L); % term that will define the new weights
-        for k=1:L
-            
-            % Some terms
-            xm = xmeans(:,k); % prediction mean (mi^-)
-            Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % jacobian
-            %cov = diag(ps(:,k)); % propagated covariance of kth element
-            cov = ps{k};
-            Wk = Hm*cov*Hm'+R; % Term repeated a few times
-            
-            % gain
-            Kk = cov*Hm'*inv(Wk);    
-           
-            % mean update
-            xmeans(:,k)=xm+Kk*(ymip1-ye_gmekf(:,k));
-    
-            % Cov update
-            cov = (eye(n)-Kk*Hm)*cov;
-            %ps(:,k) = diag(cov); % save cov
-            ps{k}=cov;
-            betak = det(2*pi*Wk)^(-1/2)*exp(-0.5 *(ymip1-ye_gmekf(:,k))'*inv(Wk)*(ymip1-ye_gmekf(:,k)));
-            betas(:,k) = betak;
-    
-        end
+        % if occluded, skip update
+        if occ(i) ~= 1
+            betas = zeros(1,L); % term that will define the new weights
+            for k=1:L
+                
+                % Some terms
+                xm = xmeans(:,k); % prediction mean (mi^-)
+                Hm = range_angle_jacobian(xm, Xobsip1, mu, t(i+1)); % jacobian
+                %cov = diag(ps(:,k)); % propagated covariance of kth element
+                cov = ps{k};
+                Wk = Hm*cov*Hm'+R; % Term repeated a few times
+                
+                % gain
+                Kk = cov*Hm'*inv(Wk);    
+               
+                % mean update
+                xmeans(:,k)=xm+Kk*(ymip1-ye_gmekf(:,k));
+        
+                % Cov update
+                cov = (eye(n)-Kk*Hm)*cov;
+                %ps(:,k) = diag(cov); % save cov
+                ps{k}=cov;
+                betak = det(2*pi*Wk)^(-1/2)*exp(-0.5 *(ymip1-ye_gmekf(:,k))'*inv(Wk)*(ymip1-ye_gmekf(:,k)));
+                betas(:,k) = betak;
+        
+            end
+        
+        
     
         % now, set new weights
         sm = sum(betas.*ws);
@@ -166,6 +174,12 @@ for jj=1:ntrials
         gms{1,i+1} = xmeans;
         gms{2,i+1} = ps;
         gms{3,i+1} = ws;
+
+        else
+                gms{1,i+1} = xmeans;
+                gms{2,i+1} = ps;
+                gms{3,i+1} = ws;
+        end
     
         [xh, ph] = produce_state_estimate(xmeans, ps, ws);
         Xhat_gmekf(:,i+1) = xh;
@@ -191,6 +205,7 @@ plot(t(1:end-1), all_ws)
 xlabel("Time (TU)")
 legend("w_1", "w_2", "w_3", "w_4", "w_5", 'Location','eastoutside')
 ylabel("w_i")
+
 
 % grab average errors and 3sig bounds
 sig3 = cat(3,sig3_all{:}); sig3=sum(sig3,3)/ntrials;

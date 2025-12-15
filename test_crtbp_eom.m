@@ -23,7 +23,7 @@ x0 = [0.823385182, 0.0, -0.022134068331103266, 0.0, 0.13408802571933368, 0.0];
 % DRO State
  x0 = [1.0773094648; 0.0; 0.0; 0.0; -0.4697376289; 0.0];
 
-sig = 1e-3;
+sig = 0;
 wvar = [0;0;0; sig^2; sig^2; sig^2]; % model error of each component
 Q = diag(wvar); % covariance
 

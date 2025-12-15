@@ -2,10 +2,10 @@
 clear; close all
 
 % num trials?
-ntrials = 1;
+ntrials = 100;
 
 % Pick Noise Level
-noiselevel = "high"; % "low" or "high"
+noiselevel = "low"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-4; % sqrt process noise variance
     measure_sig = 1e-2; % sqrt measurement noise variance
@@ -185,7 +185,6 @@ l2 = plot(t, sig3(1,:), '-r', t, -sig3(1,:), 'r'); l2=l2(1);
 l3 = plot(t, err_ekf(1,:), '-k');
 l4 = plot(t, sig3_ekf(1,:), '--k', t, -sig3_ekf(1,:), '--k'); l4 = l4(1);
 legend([l1, l2, l3, l4], 'UKF err.', 'UKF 3sig', 'EKF err.', 'EKF 3sig', 'Location', 'northoutside', 'Orientation','horizontal')
-title("Position Error")
 ylabel("x (DU)")
 hold off
 
@@ -211,7 +210,6 @@ hold off
 figure
 subplot(3,1,1)
 hold on
-title("Velocity Error")
 l1 = plot(t, err(4,:)); 
 l2 = plot(t, sig3(4,:), '-r', t, -sig3(4,:), 'r'); l2=l2(1);
 l3 = plot(t, err_ekf(4,:), '-k');
