@@ -2,10 +2,10 @@
 clear; close all
 
 % num trials?
-ntrials = 100;
+ntrials = 1;
 
 % Pick Noise Level
-noiselevel = "low"; % "low" or "high"
+noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-4; % sqrt process noise variance
     measure_sig = 1e-2; % sqrt measurement noise variance
@@ -60,7 +60,7 @@ for trial=1:ntrials
     
     % initial conditions
     % Ukf cov
-    pcov = diag([1e-6, 1e-6, 1e-6, 1e-3, 1e-3, 1e-3]);
+    pcov = diag([1e-6, 1e-6, 1e-6, 1e-2, 1e-2, 1e-2]);
     P = zeros(6,m); P(:,1) = diag(pcov); % cov storage
     
     % ekf cov
@@ -177,7 +177,7 @@ sig3_ekf = cat(3,sig3_ekf_all{:}); sig3_ekf=sum(sig3_ekf,3)/ntrials;
 err = cat(3, Xes_all{:}); err=sum(err,3)/ntrials;
 err_ekf = cat(3,Xes_ekf_all{:}); err_ekf=sum(err_ekf,3)/ntrials;
 
-figure
+f1=figure;
 subplot(3,1,1)
 hold on
 l1=plot(t, err(1,:));
@@ -207,7 +207,7 @@ plot(t, sig3_ekf(3,:), '--k', t, -sig3_ekf(3,:), '--k');
 ylabel("z (DU)")
 hold off
 
-figure
+f2=figure;
 subplot(3,1,1)
 hold on
 l1 = plot(t, err(4,:)); 
@@ -237,16 +237,18 @@ ylabel("vz (DU/TU)")
 xlabel("Time (TU)")
 hold off
 
-figure
+f3 = figure;
 hold on
 plot3(Xhat(1,:), Xhat(2,:), Xhat(3,:))
 plot3(Xhat_ekf(1,:), Xhat_ekf(2,:), Xhat_ekf(3,:))
 plot3(X(1,:), X(2,:), X(3,:))
 legend('UKF', 'EKF', 'Truth')
+xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 hold off
 
-
-
+exportgraphics(f1, "plots/case_1_"+noiselevel+"_mc.png", 'Resolution',600)
+exportgraphics(f2, "plots/case_1_"+noiselevel+"_mc_vel.png", 'Resolution', 600)
+exportgraphics(f3, "plots/case_1_"+noiselevel+"_traj.png", 'Resolution', 600)
 
 % figure
 % subplot(3,1,1)

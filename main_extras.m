@@ -19,7 +19,7 @@ x0_tgt = [1.0186592988052636E+0	-2.1505075615805342E-27	-1.7967210088475610E-1	8
 
 % sampling and interval time
 dt = 60/TU; % every minute
-tf = pi;
+tf = pi/2;
 t = 0:dt:tf;
 m = length(t);
 n=6;
@@ -45,10 +45,15 @@ end
 
 figure
 hold on
-plot3(X(1,:), X(2,:), X(3,:))
-plot3(X_obs(1,:), X_obs(2,:), X_obs(3,:))
-plot3(1.0-mu, 0.0, 0.0, '.k')
-legend("Target", "Observer", "Moon")
+l1 = plot3(X(1,:), X(2,:), X(3,:));
+plot3(x0_tgt(1), x0_tgt(2), x0_tgt(3), 'xk')
+l2 = plot3(X_obs(1,:), X_obs(2,:), X_obs(3,:));
+l3 = plot3(x0_obs(1), x0_obs(2), x0_obs(3), 'xk');
+[Xx,Yy,Zz] = sphere(50); Xx = Xx*1738/DU+1.0-mu;
+Yy = 1738/DU*Yy; Zz = 1738/DU*Zz;
+surf(Xx,Yy,Zz); axis equal
+l4 = plot3(1.0-mu, 0.0, 0.0, '.k');
+legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"])
 xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 grid on
 hold off
@@ -60,6 +65,12 @@ x0_obs =  [1.108176760562800, -0.117270070982379, 0.106310036921042, -0.09615773
 % Target (dro) % jc = 3.996
 x0_tgt = [9.7651362015832144E-1	-5.7647806541303165E-28	-2.2746379925699658E-32	9.2638853182074272E-13	1.0468285446328065E+0	4.1733999115209969E-31	]';
 
+% sampling and interval time
+dt = 60/TU; % every minute
+tf = pi/4;
+t = 0:dt:tf;
+m = length(t);
+n=6;
 X = zeros(n, m); X(:,1) = x0_tgt;
 X_obs = zeros(n, m); X_obs(:,1) = x0_obs;
 ym = zeros(3,m); ym(:,1) = h0;
@@ -74,10 +85,15 @@ end
 
 figure
 hold on
-plot3(X(1,:), X(2,:), X(3,:))
-plot3(X_obs(1,:), X_obs(2,:), X_obs(3,:))
-plot3(1.0-mu, 0.0, 0.0, '.k')
-legend("Target", "Observer", "Moon")
+l1 = plot3(X(1,:), X(2,:), X(3,:));
+plot3(x0_tgt(1), x0_tgt(2), x0_tgt(3), 'xk')
+l2 = plot3(X_obs(1,:), X_obs(2,:), X_obs(3,:));
+l3 = plot3(x0_obs(1), x0_obs(2), x0_obs(3), 'xk');
+[Xx,Yy,Zz] = sphere(50); Xx = Xx*1738/DU+1.0-mu;
+Yy = 1738/DU*Yy; Zz = 1738/DU*Zz;
+surf(Xx,Yy,Zz); axis equal
+l4 = plot3(1.0-mu, 0.0, 0.0, '.k');
+legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"])
 xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 grid on
 hold off

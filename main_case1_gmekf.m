@@ -10,7 +10,7 @@ clear; close all
 ntrials = 100;
 
 % Pick Noise Level
-noiselevel = "high"; % "low" or "high"
+noiselevel = "low"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-4; % sqrt process noise variance
     measure_sig = 1e-2; % sqrt measurement noise variance
@@ -186,6 +186,21 @@ for i=1:m-1
     all_ws(:,i) = ws';
 end
 
+% average weights
+ws_avg = zeros(5,m);
+for jj=1:ntrials
+    gm = gmms_all{jj};
+    for i = 1:m
+        ws_avg(:,i) = ws_avg(:,i)+gm{3,i}';
+    end
+end
+ws_avg = ws_avg/ntrials;
+figure
+plot(t,ws_avg)
+xlabel("Time (TU)")
+legend("w_1", "w_2", "w_3", "w_4", "w_5", 'Location','eastoutside')
+ylabel("w_i")
+
 figure
 plot(t(1:end-1), all_ws)
 xlabel("Time (TU)")
@@ -258,3 +273,17 @@ plot3(Xhat_gmekf(1,:), Xhat_gmekf(2,:), Xhat_gmekf(3,:))
 plot3(X(1,:), X(2,:), X(3,:))
 legend('GMEKF', 'Truth')
 hold off
+
+figure
+subplot(3,1,1)
+plot(t, ym(1,:))
+ylabel("Range (DU)")
+
+subplot(3,1,2)
+plot(t,ym(2,:)*180/pi)
+ylabel("Az. (deg)")
+
+subplot(3,1,3)
+plot(t,ym(3,:)*180/pi)
+ylabel("El. (deg)")
+xlabel("Time (TU)")

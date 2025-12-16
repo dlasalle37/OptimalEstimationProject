@@ -7,16 +7,16 @@ clear; close all
 %#ok<*MINV> 
 
 % num trials?
-ntrials = 100;
+ntrials = 1;
 
 % Pick Noise Level
 noiselevel = "low"; % "low" or "high"
 if noiselevel == "high"
-    process_sig = 1e-12; % process noise variance
+    process_sig = 1e-3; % process noise variance
     measure_sig = 1e-2; % measurement noise variance
 else
     process_sig = 0; % process noise variance
-    measure_sig = 1e-4; % measurement noise variance
+    measure_sig = 1e-3; % measurement noise variance
 end
 
 
@@ -199,6 +199,7 @@ for i=1:m-1
     ws = gms{3,i};
     all_ws(:,i) = ws';
 end
+
 
 figure
 plot(t(1:end-1), all_ws)

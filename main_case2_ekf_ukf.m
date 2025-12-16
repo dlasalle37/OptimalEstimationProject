@@ -5,13 +5,13 @@ clear; close all
 ntrials = 100;
 
 % Pick Noise Level
-noiselevel = "low"; % "low" or "high"
+noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-3; % process noise variance
     measure_sig = 1e-2; % measurement noise variance
 else
     process_sig = 0; % process noise variance
-    measure_sig = 1e-4; % measurement noise variance
+    measure_sig = 1e-3; % measurement noise variance
 end
 
 
@@ -269,6 +269,7 @@ end
 figure
 subplot(3,1,1)
 plot(t, ym(1,:), t_occ, ym_occ(1,:), '.r')
+legend("Measured", "Occluded", 'Location', 'northoutside', 'Orientation', 'horizontal')
 ylabel("Range (km)")
 
 subplot(3,1,2)
@@ -276,6 +277,6 @@ plot(t, ym(2,:)*180/pi, t_occ, ym_occ(2,:)*180/pi, '.r')
 ylabel("Az. (deg)")
 
 subplot(3,1,3)
-plot(t, ym(3,:)*180/pi, t_occ, ym_occ(3,:)*180/pi, '.r')
+plot(t, ym(3,:)*180/pi, '-', t_occ, ym_occ(3,:)*180/pi, '.r')
 ylabel("El. (deg)")
 xlabel("Time (TU)")
