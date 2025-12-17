@@ -43,7 +43,7 @@ for i=1:m-1
     ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
 end
 
-figure
+f1 = figure;
 hold on
 l1 = plot3(X(1,:), X(2,:), X(3,:));
 plot3(x0_tgt(1), x0_tgt(2), x0_tgt(3), 'xk')
@@ -53,9 +53,10 @@ l3 = plot3(x0_obs(1), x0_obs(2), x0_obs(3), 'xk');
 Yy = 1738/DU*Yy; Zz = 1738/DU*Zz;
 surf(Xx,Yy,Zz); axis equal
 l4 = plot3(1.0-mu, 0.0, 0.0, '.k');
-legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"])
+legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"], 'Location', 'eastoutside')
 xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 grid on
+view(-45,30)
 hold off
 
 
@@ -83,7 +84,7 @@ for i=1:m-1
     ym(:,i+1) = range_angle_measurement(X(:,i+1), X_obs(:,i+1), t(i), R, mu);
 end
 
-figure
+f2 = figure;
 hold on
 l1 = plot3(X(1,:), X(2,:), X(3,:));
 plot3(x0_tgt(1), x0_tgt(2), x0_tgt(3), 'xk')
@@ -93,7 +94,12 @@ l3 = plot3(x0_obs(1), x0_obs(2), x0_obs(3), 'xk');
 Yy = 1738/DU*Yy; Zz = 1738/DU*Zz;
 surf(Xx,Yy,Zz); axis equal
 l4 = plot3(1.0-mu, 0.0, 0.0, '.k');
-legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"])
+legend([l1, l2, l3, l4], ["Target", "Observer", "Initial Pos.", "Moon"], 'Location', 'eastoutside')
 xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 grid on
+view(-45,30)
 hold off
+
+
+exportgraphics(f1, "plots/case_1_traj.png", 'Resolution',600)
+exportgraphics(f2, "plots/case_2_traj.png", 'Resolution', 600)

@@ -63,7 +63,7 @@ for trial=1:ntrials
     
     % initial conditions
     % Ukf cov
-    pcov = diag([1e-6, 1e-6, 1e-6, 1e-2, 1e-2, 1e-2]);
+    pcov = diag([1e-6, 1e-6, 1e-6, 1e-3, 1e-3, 1e-3]);
     P = zeros(6,m); P(:,1) = diag(pcov); % cov storage
     
     % ekf cov

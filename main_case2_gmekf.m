@@ -10,7 +10,7 @@ clear; close all
 ntrials = 100;
 
 % setting to true will overwrite plots/
-save_figs = high;
+save_figs = false;
 
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
@@ -275,6 +275,7 @@ f3 = figure;
 hold on
 plot3(Xhat_gmekf(1,:), Xhat_gmekf(2,:), Xhat_gmekf(3,:))
 plot3(X(1,:), X(2,:), X(3,:))
+xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 legend('GMEKF', 'Truth')
 hold off
 

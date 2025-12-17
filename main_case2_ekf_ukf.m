@@ -7,7 +7,6 @@ ntrials = 100;
 % setting to true will overwrite plots/
 save_figs = false;
 
-
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
@@ -257,6 +256,7 @@ plot3(Xhat(1,:), Xhat(2,:), Xhat(3,:))
 plot3(Xhat_ekf(1,:), Xhat_ekf(2,:), Xhat_ekf(3,:))
 plot3(X(1,:), X(2,:), X(3,:))
 legend('UKF', 'EKF', 'Truth')
+xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 hold off
 
 % plot measurement and occlusions (also last trial only, but this one is

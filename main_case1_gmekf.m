@@ -12,7 +12,6 @@ ntrials = 100;
 % setting to true will overwrite plots/
 save_figs = false;
 
-
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"

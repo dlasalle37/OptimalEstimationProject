@@ -1,8 +1,7 @@
 Downloading locally should allow you to run this without any problems. Contents are described below
 
 # Main Directory
-Scripts beginning with `main_` are the scripts where the simulations are. The UKF and EKF are sims combined. GMEKF is separate (and not done yet). They are also separated by cases. Use these to generate the figures shown in the report.
-  
+Scripts beginning with `main_` are the scripts where the simulations are. The UKF and EKF are sims combined. GMEKF is separate (and not done yet). They are also separated by cases. Use these to generate the figures shown in the report. `main_extras` specifically just generates some extra figures, namely some trajectory plots.
   Some options set at top of these scripts: 
   
     `ntrials`: how many trials to run.
