@@ -4,6 +4,10 @@ clear; close all
 % num trials?
 ntrials = 100;
 
+% setting to true will overwrite plots/
+save_figs = false;
+
+
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
@@ -186,7 +190,7 @@ sig3_ekf = cat(3,sig3_ekf_all{:}); sig3_ekf=sum(sig3_ekf,3)/ntrials;
 err = cat(3, Xes_all{:}); err=sum(err,3)/ntrials;
 err_ekf = cat(3,Xes_ekf_all{:}); err_ekf=sum(err_ekf,3)/ntrials;
 
-figure
+f1 = figure;
 subplot(3,1,1)
 hold on
 ylabel("x (DU)")
@@ -216,7 +220,7 @@ plot(t, err_ekf(3,:), '-k');
 plot(t, sig3_ekf(3,:), '--k', t, -sig3_ekf(3,:), '--k');
 hold off
 
-figure
+f2 = figure;
 subplot(3,1,1)
 hold on
 ylabel("vx (DU/TU)")
@@ -246,7 +250,7 @@ plot(t, err_ekf(6,:), '-k');
 plot(t, sig3_ekf(6,:), '--k', t, -sig3_ekf(6,:), '--k');
 hold off
 
-figure
+f3 = figure;
 %note this trajectory plot just uses last trial
 hold on
 plot3(Xhat(1,:), Xhat(2,:), Xhat(3,:))
@@ -266,7 +270,7 @@ for i=1:hdims
     ym_occ(i,:) = ymi(locc);
 end
 
-figure
+f4 = figure;
 subplot(3,1,1)
 plot(t, ym(1,:), t_occ, ym_occ(1,:), '.r')
 legend("Measured", "Occluded", 'Location', 'northoutside', 'Orientation', 'horizontal')
@@ -280,3 +284,10 @@ subplot(3,1,3)
 plot(t, ym(3,:)*180/pi, '-', t_occ, ym_occ(3,:)*180/pi, '.r')
 ylabel("El. (deg)")
 xlabel("Time (TU)")
+
+if save_figs == true
+    exportgraphics(f1, "plots/case_2_"+noiselevel+"_mc.png", 'Resolution',600)
+    exportgraphics(f2, "plots/case_2_"+noiselevel+"_mc_vel.png", 'Resolution', 600)
+    exportgraphics(f3, "plots/case_2_"+noiselevel+"_traj.png", 'Resolution', 600)
+    exportgraphics(f4, "plots/case_2_"+noiselevel+"_measurement.png", 'Resolution', 600)
+end

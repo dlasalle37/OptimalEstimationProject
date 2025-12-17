@@ -2,7 +2,10 @@
 clear; close all
 
 % num trials?
-ntrials = 1;
+ntrials = 100;
+
+% setting to true will overwrite plots/
+save_figs = false;
 
 % Pick Noise Level
 noiselevel = "high"; % "low" or "high"
@@ -246,9 +249,11 @@ legend('UKF', 'EKF', 'Truth')
 xlabel("X (DU)"); ylabel("Y (DU)"); zlabel("Z (DU)")
 hold off
 
-exportgraphics(f1, "plots/case_1_"+noiselevel+"_mc.png", 'Resolution',600)
-exportgraphics(f2, "plots/case_1_"+noiselevel+"_mc_vel.png", 'Resolution', 600)
-exportgraphics(f3, "plots/case_1_"+noiselevel+"_traj.png", 'Resolution', 600)
+if save_figs==true
+    exportgraphics(f1, "plots/case_1_"+noiselevel+"_mc.png", 'Resolution',600)
+    exportgraphics(f2, "plots/case_1_"+noiselevel+"_mc_vel.png", 'Resolution', 600)
+    exportgraphics(f3, "plots/case_1_"+noiselevel+"_traj.png", 'Resolution', 600)
+end
 
 % figure
 % subplot(3,1,1)

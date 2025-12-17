@@ -9,8 +9,12 @@ clear; close all
 % num trials?
 ntrials = 100;
 
+% setting to true will overwrite plots/
+save_figs = false;
+
+
 % Pick Noise Level
-noiselevel = "low"; % "low" or "high"
+noiselevel = "high"; % "low" or "high"
 if noiselevel == "high"
     process_sig = 1e-4; % sqrt process noise variance
     measure_sig = 1e-2; % sqrt measurement noise variance
@@ -195,13 +199,13 @@ for jj=1:ntrials
     end
 end
 ws_avg = ws_avg/ntrials;
-figure
+fwavg = figure;
 plot(t,ws_avg)
 xlabel("Time (TU)")
 legend("w_1", "w_2", "w_3", "w_4", "w_5", 'Location','eastoutside')
 ylabel("w_i")
 
-figure
+fwex = figure;
 plot(t(1:end-1), all_ws)
 xlabel("Time (TU)")
 legend("w_1", "w_2", "w_3", "w_4", "w_5", 'Location','eastoutside')
@@ -211,7 +215,7 @@ ylabel("w_i")
 sig3 = cat(3,sig3_all{:}); sig3=sum(sig3,3)/ntrials;
 errs = cat(3, Xes_all{:}); errs=sum(errs,3)/ntrials;
 
-figure
+f1 = figure;
 subplot(3,1,1)
 hold on
 l1=plot(t, errs(1,:));
@@ -238,7 +242,7 @@ ylabel("Z (DU)")
 xlabel("Time (TU)")
 hold off
 
-figure
+f2 = figure;
 
 subplot(3,1,1)
 hold on
@@ -267,14 +271,14 @@ xlabel("Time (TU)")
 hold off
 
 
-figure
+f3 = figure;
 hold on
 plot3(Xhat_gmekf(1,:), Xhat_gmekf(2,:), Xhat_gmekf(3,:))
 plot3(X(1,:), X(2,:), X(3,:))
 legend('GMEKF', 'Truth')
 hold off
 
-figure
+f4 = figure;
 subplot(3,1,1)
 plot(t, ym(1,:))
 ylabel("Range (DU)")
@@ -287,3 +291,11 @@ subplot(3,1,3)
 plot(t,ym(3,:)*180/pi)
 ylabel("El. (deg)")
 xlabel("Time (TU)")
+
+if save_figs == true
+exportgraphics(f1, "plots/case_1_"+noiselevel+"_mc_gmekf.png", 'Resolution',600)
+    exportgraphics(f2, "plots/case_1_"+noiselevel+"_mc_gmekf_vel.png", 'Resolution', 600)
+    exportgraphics(f3, "plots/case_1_"+noiselevel+"_traj_gmekf.png", 'Resolution', 600)
+    exportgraphics(f4, "plots/case_1_measurement_"+noiselevel+".png", 'Resolution', 600)
+    exportgraphics(fwex, "plots/case_1_"+noiselevel+"_ws.png", 'Resolution', 600)
+end
